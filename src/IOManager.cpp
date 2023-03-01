@@ -2,8 +2,6 @@
 
 IOManager::IOManager() : epfd_{epoll_create(1)}
 {
-    // TODO: Still needed ?
-    // this->epfd_ = epoll_create(1);
 }
 
 void IOManager::Loop()
