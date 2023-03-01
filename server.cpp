@@ -1,7 +1,7 @@
 #include <iostream>
 
 #include "Server.h"
-#include "IOLoop.h"
+#include "IOManager.h"
 #include <unistd.h>
 
 int main()
@@ -10,6 +10,8 @@ int main()
     int port = 13131;
 
     TCPServer s{host, port};
+
+    s.Loop();
 
     return 0;
 }

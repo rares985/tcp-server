@@ -12,25 +12,29 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <map>
+#include <iostream>
 
-#include "Handler.h"
+#include "EventHandler.h"
 
-class IOLoop
+class IOManager
 {
 private:
     static constexpr int kMaxEvents_ = 32;
 
     int epfd_;
-    std::map<int, Handler *> handlers_;
-    struct epoll_event events_[kMaxEvents_];
+    epoll_event events_[kMaxEvents_];
+
+protected:
+    IOManager();
+    void AddHandler(int fd, unsigned int events);
+    void RemoveHandler(int fd);
+
+    virtual void Handle(int fd, epoll_event ev) = 0;
 
 public:
-    IOLoop();
+    IOManager(const IOManager &other) = delete;
 
     void Loop();
-
-    void AddHandler(int fd, Handler *h, unsigned int events);
-    void RemoveHandler(int fd);
 };
 
 #endif /* IO_LOOP_H_ */

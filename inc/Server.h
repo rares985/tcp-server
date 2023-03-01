@@ -17,35 +17,64 @@
 #include <iostream>
 
 #include "Socket.h"
+#include "EventHandler.h"
+#include "IOManager.h"
 
-class TCPServer
+class TCPServer : public IOManager, public EventHandler
 {
 private:
     Socket sock_;
 
+    std::map<int, EventHandler *> clients_;
+
 public:
     TCPServer(const char *host, int port, int max_clients = 5) : sock_{host, port}
     {
-        sock_.MakeNonBlocking();
+        sock_.MakeNonBlocking(2);
         sock_.Bind();
         sock_.Listen(max_clients);
+
+        AddHandler(sock_.Fd(), EPOLLIN | EPOLLOUT | EPOLLET);
     }
-
-    // int Accept()
-    // {
-    //     sockaddr_in addr;
-    //     socklen_t addrlen = sizeof(addr);
-    //     int client_fd = accept(fd_, (struct sockaddr *)&addr, &addrlen);
-
-    //     char buf[INET_ADDRSTRLEN]{0};
-    //     inet_ntop(AF_INET, (char *)&(addr.sin_addr), buf, sizeof(addr));
-    //     std::cout << "[+] connected with " << buf << ":" << ntohs(addr.sin_port) << "\n";
-
-    //     return client_fd;
-    // }
 
     ~TCPServer()
     {
+    }
+
+    void Handle(int fd, epoll_event ev) override
+    {
+        if (fd == sock_.Fd())
+        {
+            /* New connection, accept it */
+            int client_fd = sock_.Accept();
+            // TODO: Make nonblocking
+            // clients_[client_fd] = new Handler(); // TODO? Yes or no keep it?
+            AddHandler(client_fd, EPOLLIN | EPOLLET | EPOLLRDHUP | EPOLLHUP);
+        }
+        else if (ev.events & (EPOLLRDHUP | EPOLLHUP))
+        {
+            std::cout << "[" << fd << "]";
+            std::cout << "Client disconnected\n";
+            /* Don't monitor this fd anymore */
+            RemoveHandler(fd);
+        }
+        else if (ev.events & EPOLLIN)
+        {
+            /* Read */
+            Read(fd);
+        }
+        else
+        {
+            std::cout << "Unexpected events " << ev.events << "\n";
+        }
+    }
+
+    void Read(int fd)
+    {
+        unsigned char buf[512]{0};
+        sock_.Receive(fd, buf, sizeof(buf));
+        std::cout << "[" << fd << "]";
+        std::cout << "Received " << buf << "\n";
     }
 };
 
